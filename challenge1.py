@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from scipy.sparse import hstack
 from sklearn.cross_validation import cross_val_score
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
@@ -19,38 +18,41 @@ class Transformer():
         
         self._categorical_features = [
                                       #'SEX', 
-                                      #'PRIOR.MAL', 
-                                      #'PRIOR.CHEMO',
-                                      #'PRIOR.XRT', # whether blah happeneed
-                                      #'Infection'
-                                      'cyto.cat',
-                                      #'ITD',
-                                      #'D835',
-                                      #'Ras.Stat'
+                                      #'PRIOR.MAL', # Whether the patient has previous cancer
+                                      #'PRIOR.CHEMO', # Whether the patient had prior chemo
+                                      #'PRIOR.XRT', # Prior radiation
+                                      #'Infection' # Has infection
+                                      'cyto.cat', #  cytogenic category
+                                      'ITD', # Has the ITD FLT3 mutation
+                                      #'D835', # Has the D835 FLT3 mutation
+                                      #'Ras.Stat' # Has the Ras.Stat mutation
                                       ]
 
         self._numerical_features = [
-                                    'Age.at.Dx', 
-                                    'WBC', 
-                                    #'ABS.BLST',
-                                    #'BM.BLAST',
-                                    'BM.MONOCYTES',
-                                    'BM.PROM',
-                                    #'PB.BLAST',
-                                    #'PB.MONO',
-                                    'PB.PROM', 
-                                    'HGB',
-                                    #'LDH', 
-                                    'ALBUMIN', 
-                                    #'BILIRUBIN', 
-                                    #'CREATININE',
-                                    #'FIBRINOGEN',
+                                    #'Age.at.Dx', # Age at diagnosis
+                                    #'WBC',  # white blood cell count
+                                    #'ABS.BLST', #  Total Myeloid blast cells
+                                    #'BM.BLAST', #  Myeloid blast cells measured in bone marrow samples
+                                    'BM.MONOCYTES', # Monocyte cells in bone marrow
+                                    'BM.PROM', # Promegakarocytes measured in bone marrow
+                                    #'PB.BLAST', # Myeloid blast cells in blood
+                                    'PB.MONO', # Monocytes in blood
+                                    #'PB.PROM',  # Promegakarocytes in blood
+                                    #'HGB', # hemoglobin count in blood
+                                    #'LDH',  # lactate dehydrogenase levels measured in blood
+                                    'ALBUMIN',  # albumin levels (protein made by the liver,  body is not absorbing enough protein)
+                                    #'BILIRUBIN',  # bilirubin levels (found in bile,  fluid made by the liver, can lead to jaundice)
+                                    #'CREATININE', # creatinine levels (measure of kidney function, waste of creatine, should be removed by kidneys)
+                                    'FIBRINOGEN', # fibrinongen levels (protein produced by the liver)
 
-                                    'CD34',
+                                    'CD34', 
                                     #'CD7',
                                     'CD20',
                                     #'HLA.DR', 
-                                    #'CD33', 'CD10','CD13','CD19'
+                                    #'CD33', 
+                                    #'CD10',
+                                    'CD13',
+                                    'CD19'
         ]
 
         self._proteomic = [l.strip() for l in open('proteomic_columns_used.txt')]
@@ -94,8 +96,10 @@ class Transformer():
 def get_top_features(feature_names, model):
     #print model.coef_[0, :]
     features = sorted(zip(model.coef_[0, :], feature_names), reverse=True)
-    print features[:20]
-    print features[-20:]
+    for x in features[:20]:
+        print x
+    for x in features[-20:]:
+        print x
 
 def eval_model(model, X, Y, transformer):
     scores = cross_val_score(model, X, Y, scoring='roc_auc', cv=10)
@@ -122,8 +126,8 @@ if __name__ == '__main__':
     #print y.value_counts()
 
 
-    #model = RandomForestClassifier(n_estimators = 100)
-    model = LogisticRegression(penalty='l2')
+    #model = RandomForestClassifier(n_estimators = 2000)
+    model = LogisticRegression(penalty='l1')
 
     if args.submit:
         logging.info("Fitting final model...")
