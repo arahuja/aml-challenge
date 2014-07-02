@@ -70,7 +70,11 @@ class Transformer():
                                     'CD13',
                                     'CD19',
                                     'ALBUMIN',
-                                    'FIBRINOGEN'
+                                    'FIBRINOGEN',
+                                    #'BM.PROM',
+                                    #'PB.MONO',
+                                    #'PB.PROM',
+                                    #'BM.MONOCYTES'
         ] + self._proteomic
     
         self._dv = DictVectorizer()
@@ -123,7 +127,6 @@ class Transformer():
         return self.transform(data)
 
 def get_top_features(feature_names, model):
-    #print model.coef_[0, :]
     features = sorted(zip(model.coef_[0, :], feature_names), reverse=True)
     for x in set(features[:30] + features[-30:]):
         print x
@@ -150,7 +153,6 @@ if __name__ == '__main__':
     X = transformer.fit_transform(data)
     y = data['resp.simple'].map(lambda x: 1 if x == 'CR' else 0)
     print X.shape
-    #print y.value_counts()
 
 
     #model = RandomForestClassifier(n_estimators = 2000)
