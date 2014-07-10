@@ -1,14 +1,13 @@
 import pandas as pd
 from scipy.sparse import hstack
 from sklearn.cross_validation import cross_val_score
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.feature_extraction import DictVectorizer
-from sklearn.preprocessing import Imputer, StandardScaler
+from sklearn.preprocessing import StandardScaler
 
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import binarize
+from sklearn.linear_model import Lasso, Ridge, LinearRegression
 
-from patsy import dmatrix
+import numpy as np
 
 import argparse
 import logging
@@ -59,7 +58,7 @@ class Transformer():
 
         self._proteomic = [l.strip() for l in open('proteomic_columns_used.txt')]
 
-        self._untransformed_features = ['Age.at.Dx'] + self._proteomic
+        self._untransformed_features = ['Age.at.Dx'] #+ self._proteomic
         self._binned_features = [   'Age.at.Dx',
                                     'CD34', 
                                     #'CD7',
@@ -97,7 +96,7 @@ class Transformer():
     def _fit_binned_features(self, data, train = False):
         binned_feature_names = [x + "-binned" for x in self._binned_features]
         for feature in self._binned_features:
-            self.create_bounded_features(data, feature, splits = [0.0, 0.2, 0.9, 1.0] , percentiles = True, train = train)
+            self.create_bounded_features(data, feature, splits = [0.0, 0.5, 1.0] , percentiles = True, train = train)
         if train:
             binnedX = self._dv.fit_transform(data[binned_feature_names].T.to_dict().values())
         else:
@@ -127,12 +126,12 @@ class Transformer():
         return self.transform(data)
 
 def get_top_features(feature_names, model):
-    features = sorted(zip(model.coef_[0, :], feature_names), reverse=True)
+    features = sorted(zip(model.coef_, feature_names), reverse=True)
     for x in set(features[:30] + features[-30:]):
         print x
 
 def eval_model(model, X, Y, transformer):
-    scores = cross_val_score(model, X, Y, scoring='roc_auc', cv=10)
+    scores = cross_val_score(model, X, Y,cv=10)
     logging.info(scores)
     logging.info("Average cross validation score: {}".format(scores.mean()))
     model.fit(X, Y)
@@ -148,31 +147,31 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     data = pd.read_csv('trainingData-release.csv')
-    transformer = Transformer(include_binned = True)
+    data = data[data['resp.simple'] == 'CR']
+    transformer = Transformer(include_binned = False)
 
     X = transformer.fit_transform(data)
-    y = data['resp.simple'].map(lambda x: 1 if x == 'CR' else 0)
+    y = np.log(data.Remission_Duration)
     print X.shape
 
 
-    #model = RandomForestClassifier(n_estimators = 2000)
-    model = LogisticRegression(penalty='l1')
+    model = RandomForestRegressor(n_estimators = 2000)
+    #model = LinearRegression()
 
     if args.submit:
         logging.info("Fitting final model...")
         model.fit(X, y)
         get_top_features(transformer.feature_names, model)
         logging.info("Predicting and creating submission file...")
-        import cPickle
-        # save the classifier
-        with open('c1_model.pkl', 'wb') as fid:
-            cPickle.dump(model, fid) 
+        #import cPickle
+        #c1_model = cPickle.load(open('c1_model.pkl', 'wb'))
         create_submission(model, 
                        test_file = 'scoringData-release.csv',
                        id_column = '#Patient_id',
-                       prediction_column = 'CR_Confidence',
+                       prediction_column = 'Remission_Duration',
+                       confidence_column = 'Confidence',
                        transformer = transformer,
-                       output_file = "challenge1_submission.csv")
+                       output_file = "challenge2_submission.csv")
     else:
         logging.info("Running cross-validation...")
         eval_model(model, X, y, transformer)
