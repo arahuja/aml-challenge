@@ -12,7 +12,7 @@ def create_submission(model,
   if transformer:
     X = transformer.transform(submission_test)
   
-  predictions = model.predict_proba(X).T[0]
+  predictions = model.predict_proba(X).T[-1]
 
   submission = pd.DataFrame({id_column: submission_test[id_column], prediction_column: predictions})
   if confidence:
