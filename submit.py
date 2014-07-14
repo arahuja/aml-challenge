@@ -1,22 +1,41 @@
 import pandas as pd
 
-def create_submission(model,
-    test_file, id_column = 'ID',
-    prediction_column = 'Class',
-    transformer = None,
-    output_file = 'submission.csv',
-    compute_confidence = None):
-  
-  submission_test = pd.read_csv(test_file) 
 
-  if transformer:
-    X = transformer.transform(submission_test)
-  
-  predictions = model.predict_proba(X).T[-1]
+def predict_submission_file(model,
+                            test_file, transformer = None,
+                            id_column = 'ID',
+                            prediction_column = 'Class',
+                            output_file = 'submission.csv',
+                            compute_confidence = None):
 
-  submission = pd.DataFrame({id_column: submission_test[id_column], prediction_column: predictions})
-  if confidence:
-    submission['Confidence'] = 1
+    df = pd.read_csv(test_file)
 
-  submission.sort_index(axis=1, inplace=True)
-  submission.to_csv(output_file, index=False)
+    if transformer:
+        X = transformer.transform(df)
+    else:
+        X = df
+
+    predict_submission(model, df[id_column],
+                       X, id_column,
+                       prediction_column,
+                       output_file)
+
+
+def predict_submission(model,
+                       id_idx,
+                       X, id_column = 'ID',
+                       prediction_column = 'Class',
+                       transformer = None,
+                       output_file = 'submission.csv'):
+    p = model.predict_proba(X).T[-1]
+
+    submission = pd.DataFrame({id_column: id_idx, prediction_column: p})
+
+    if output_file:
+        create_submission(submission, output_file)
+
+
+def create_submission(submit_df,
+                      output_file = 'submission.csv'):
+    submit_df.sort_index(axis=1, inplace=True)
+    submit_df.to_csv(output_file, index=False)

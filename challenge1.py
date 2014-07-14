@@ -1,21 +1,19 @@
 import pandas as pd
 from scipy.sparse import hstack
 from sklearn.cross_validation import cross_val_score
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.feature_extraction import DictVectorizer
-from sklearn.preprocessing import Imputer, StandardScaler
+from sklearn.preprocessing import StandardScaler
 
 from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import binarize
 
-from patsy import dmatrix
+from submit import predict_submission_file
 
 import argparse
 import logging
 
-from submit import create_submission
 
-class Transformer():
+class Transformer(object):
     def __init__(self, include_binned = False):
         
         self._categorical_features = [
@@ -35,11 +33,11 @@ class Transformer():
                                     #'WBC',  # white blood cell count
                                     #'ABS.BLST', #  Total Myeloid blast cells
                                     #'BM.BLAST', #  Myeloid blast cells measured in bone marrow samples
-                                    #'BM.MONOCYTES', # Monocyte cells in bone marrow
-                                    #'BM.PROM', # Promegakarocytes measured in bone marrow
+                                    'BM.MONOCYTES', # Monocyte cells in bone marrow
+                                    'BM.PROM', # Promegakarocytes measured in bone marrow
                                     #'PB.BLAST', # Myeloid blast cells in blood
-                                    #'PB.MONO', # Monocytes in blood
-                                    #'PB.PROM',  # Promegakarocytes in blood
+                                    'PB.MONO', # Monocytes in blood
+                                    'PB.PROM',  # Promegakarocytes in blood
                                     #'HGB', # hemoglobin count in blood
                                     #'LDH',  # lactate dehydrogenase levels measured in blood
                                     #'ALBUMIN',  # albumin levels (protein made by the liver,  body is not absorbing enough protein)
@@ -94,7 +92,7 @@ class Transformer():
         data[col+'-binned'].fillna('NA', inplace = True)
 
 
-    def _fit_binned_features(self, data, train = False):
+    def _bin_features(self, data, train = False):
         binned_feature_names = [x + "-binned" for x in self._binned_features]
         for feature in self._binned_features:
             self.create_bounded_features(data, feature, splits = [0.0, 0.2, 0.9, 1.0] , percentiles = True, train = train)
@@ -108,18 +106,17 @@ class Transformer():
         self.feature_names = self._untransformed_features[:]
         X = data[self._untransformed_features]
         if self._include_binned:
-            binnedX = self._fit_binned_features(data, train = True)
+            binnedX = self._bin_features(data, train = True)
             self.feature_names += self._dv.get_feature_names()
             X = hstack((X, binnedX)).todense()
-        print X.shape
-        self._scaler.fit(X)
+        #self._scaler.fit(X)
 
     def transform(self, data):
         X = data[self._untransformed_features]
         if self._include_binned:
-            binnedX = self._fit_binned_features(data, train = False)
+            binnedX = self._bin_features(data, train = False)
             X = hstack((X, binnedX)).todense()
-        self._scaler.transform(X)
+        #self._scaler.transform(X)
         return X
 
     def fit_transform(self, data):
@@ -127,12 +124,13 @@ class Transformer():
         return self.transform(data)
 
 def get_top_features(feature_names, model):
-    features = sorted(zip(model.coef_[0, :], feature_names), reverse=True)
-    for x in set(features[:30] + features[-30:]):
-        print x
+    if hasattr(model, 'coef_'):
+        features = sorted(zip(model.coef_[0, :], feature_names), reverse=True)
+        for x in set(features[:30] + features[-30:]):
+            print x
 
 def eval_model(model, X, Y, transformer):
-    scores = cross_val_score(model, X, Y, scoring='roc_auc', cv=10)
+    scores = cross_val_score(model, X, Y, scoring='roc_auc', cv=5)
     logging.info(scores)
     logging.info("Average cross validation score: {}".format(scores.mean()))
     model.fit(X, Y)
@@ -144,6 +142,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--submit', default=False, action='store_true', dest='submit')
+    parser.add_argument('--eval', default=False, action='store_true', dest='eval')
+    parser.add_argument('--linear', default=False, action='store_true', dest='linear')
+    parser.add_argument('--output', default='c1_model.pkl', dest='output')
 
     args = parser.parse_args()
 
@@ -152,11 +153,19 @@ if __name__ == '__main__':
 
     X = transformer.fit_transform(data)
     y = data['resp.simple'].map(lambda x: 1 if x == 'CR' else 0)
-    print X.shape
 
 
-    #model = RandomForestClassifier(n_estimators = 2000)
-    model = LogisticRegression(penalty='l1')
+    rf_model = GradientBoostingClassifier(n_estimators = 500)
+    lr_model = LogisticRegression(penalty='l1')
+
+    if args.linear:
+        model = lr_model
+    else:
+        model = rf_model
+
+    if args.eval:
+        logging.info("Running cross-validation...")
+        eval_model(model, X, y, transformer)
 
     if args.submit:
         logging.info("Fitting final model...")
@@ -165,17 +174,14 @@ if __name__ == '__main__':
         logging.info("Predicting and creating submission file...")
         import cPickle
         # save the classifier
-        with open('c1_model.pkl', 'wb') as fid:
+        with open(args.output, 'wb') as fid:
             cPickle.dump(model, fid) 
-        create_submission(model, 
-                       test_file = 'scoringData-release.csv',
-                       id_column = '#Patient_id',
-                       prediction_column = 'CR_Confidence',
-                       transformer = transformer,
-                       output_file = "challenge1_submission.csv")
-    else:
-        logging.info("Running cross-validation...")
-        eval_model(model, X, y, transformer)
+        predict_submission_file(model, 
+                                test_file = 'scoringData-release.csv',
+                                id_column = '#Patient_id',
+                                prediction_column = 'CR_Confidence',
+                                transformer = transformer,
+                                output_file = "challenge1_submission.csv")
 
 
 
