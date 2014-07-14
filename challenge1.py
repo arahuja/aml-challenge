@@ -14,7 +14,7 @@ import logging
 
 
 class Transformer(object):
-    def __init__(self, include_binned = False):
+    def __init__(self, include_binned = False, scale = False):
         self._categorical_features = [
                                       #'SEX',
                                       #'PRIOR.MAL', # Whether the patient has previous cancer
@@ -67,7 +67,7 @@ class Transformer(object):
                                     'CD19',
                                     'ALBUMIN',
                                     'FIBRINOGEN',
-                                    #'BM.PROM',
+                                    'BM.PROM',
                                     #'PB.MONO',
                                     #'PB.PROM',
                                     #'BM.MONOCYTES'
@@ -78,6 +78,7 @@ class Transformer(object):
         self._bounding_bins = {}
 
         self._include_binned = include_binned
+        self._scale = scale
 
     def create_bounded_features(self, data, col, splits, percentiles = False, train = True):
         binned_feature_name = col+'-binned'
@@ -88,7 +89,6 @@ class Transformer(object):
         else:
             data[col+'-binned'] = pd.cut(data[col], self._bounding_bins[col], retbins = False) 
         data[col+'-binned'].fillna('NA', inplace = True)
-
 
     def _bin_features(self, data, train = False):
         binned_feature_names = [x + "-binned" for x in self._binned_features]
@@ -111,14 +111,16 @@ class Transformer(object):
             binnedX = self._bin_features(data, train = True)
             self.feature_names += self._dv.get_feature_names()
             X = hstack((X, binnedX)).todense()
-        #self._scaler.fit(X)
+        if self._scale:
+            self._scaler.fit(X)
 
     def transform(self, data):
         X = data[self._untransformed_features]
         if self._include_binned:
             binnedX = self._bin_features(data, train = False)
             X = hstack((X, binnedX)).todense()
-        #self._scaler.transform(X)
+        if self._scale:
+            self._scaler.transform(X)
         return X
 
     def fit_transform(self, data):
@@ -131,12 +133,13 @@ def get_top_features(feature_names, model):
         for x in set(features[:30] + features[-30:]):
             print x
 
-def eval_model(model, X, Y, transformer):
+def eval_model(model, X, Y, transformer, print_coef = False):
     scores = cross_val_score(model, X, Y, scoring='roc_auc', cv=5)
     logging.info(scores)
     logging.info("Average cross validation score: {}".format(scores.mean()))
     model.fit(X, Y)
-    get_top_features(transformer.feature_names, model)
+    if print_coef:
+        get_top_features(transformer.feature_names, model)
 
 if __name__ == '__main__':
 
@@ -146,28 +149,32 @@ if __name__ == '__main__':
     parser.add_argument('--submit', default=False, action='store_true', dest='submit')
     parser.add_argument('--eval', default=False, action='store_true', dest='eval')
     parser.add_argument('--linear', default=False, action='store_true', dest='linear')
+    parser.add_argument('--bin', default=False, action='store_true', dest='bin')
+    
+    parser.add_argument('--scale', default=False, action='store_true', dest='scale')
+    parser.add_argument('--print-coef', default=False, action='store_true', dest='print_coef')  
     parser.add_argument('--output', default='c1_model.pkl', dest='output')
-
     args = parser.parse_args()
 
-    data = pd.read_csv('trainingData-release.csv')
-    transformer = Transformer(include_binned = True)
+    train_data = pd.read_csv('trainingData-release.csv')
+    submit_data = pd.read_csv('scoringData-release.csv')
+    data = pd.concat([train_data, submit_data], ignore_index = True)
+    transformer = Transformer(include_binned = args.bin, scale = args.scale)
 
-    X = transformer.fit_transform(data)
-    y = data['resp.simple'].map(lambda x: 1 if x == 'CR' else 0)
+    X_full = transformer.fit_transform(data)
+    X = X_full[:len(train_data)]
+    X_test = X_full[len(train_data):]
+    y = train_data['resp.simple'].map(lambda x: 1 if x == 'CR' else 0)
 
 
     rf_model = GradientBoostingClassifier(n_estimators = 500)
-    lr_model = LogisticRegression(penalty='l1')
+    lr_model = LogisticRegression(penalty='l2')
 
-    if args.linear:
-        model = lr_model
-    else:
-        model = rf_model
+    model = lr_model if args.linear else rf_model
 
     if args.eval:
         logging.info("Running cross-validation...")
-        eval_model(model, X, y, transformer)
+        eval_model(model, X, y, transformer, args.print_coef)
 
     if args.submit:
         logging.info("Fitting final model...")

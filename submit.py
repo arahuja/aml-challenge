@@ -5,7 +5,7 @@ def predict_submission_file(model,
                             test_file, transformer = None,
                             id_column = 'ID',
                             prediction_column = 'Class',
-                            output_file = 'submission.csv',
+                            output_file = None,
                             compute_confidence = None):
 
     df = pd.read_csv(test_file)
@@ -25,8 +25,7 @@ def predict_submission(model,
                        id_idx,
                        X, id_column = 'ID',
                        prediction_column = 'Class',
-                       transformer = None,
-                       output_file = 'submission.csv'):
+                       output_file = None):
     p = model.predict_proba(X).T[-1]
 
     submission = pd.DataFrame({id_column: id_idx, prediction_column: p})
