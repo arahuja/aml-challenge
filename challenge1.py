@@ -15,15 +15,14 @@ import logging
 
 class Transformer(object):
     def __init__(self, include_binned = False):
-        
         self._categorical_features = [
-                                      #'SEX', 
+                                      #'SEX',
                                       #'PRIOR.MAL', # Whether the patient has previous cancer
                                       #'PRIOR.CHEMO', # Whether the patient had prior chemo
                                       #'PRIOR.XRT', # Prior radiation
                                       #'Infection' # Has infection
                                       #'cyto.cat', #  cytogenic category
-                                      'ITD', # Has the ITD FLT3 mutation
+                                      'ITD',  # Has the ITD FLT3 mutation
                                       #'D835', # Has the D835 FLT3 mutation
                                       #'Ras.Stat' # Has the Ras.Stat mutation
                                       ]
@@ -44,7 +43,6 @@ class Transformer(object):
                                     #'BILIRUBIN',  # bilirubin levels (found in bile,  fluid made by the liver, can lead to jaundice)
                                     #'CREATININE', # creatinine levels (measure of kidney function, waste of creatine, should be removed by kidneys)
                                     #'FIBRINOGEN', # fibrinongen levels (protein produced by the liver)
-
                                     'CD34', 
                                     #'CD7',
                                     #'CD20',
@@ -95,7 +93,11 @@ class Transformer(object):
     def _bin_features(self, data, train = False):
         binned_feature_names = [x + "-binned" for x in self._binned_features]
         for feature in self._binned_features:
-            self.create_bounded_features(data, feature, splits = [0.0, 0.2, 0.9, 1.0] , percentiles = True, train = train)
+            self.create_bounded_features(data, 
+                                         feature, 
+                                         splits = [0.0, 0.2, 0.9, 1.0], 
+                                         percentiles = True, 
+                                         train = train)
         if train:
             binnedX = self._dv.fit_transform(data[binned_feature_names].T.to_dict().values())
         else:
