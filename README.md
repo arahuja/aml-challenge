@@ -3,6 +3,15 @@
 ## Wiki
 [https://www.synapse.org/#!Synapse:syn2455683](https://www.synapse.org/#!Synapse:syn2455683)
 
+### Challenge 1
+Predict which patients will have Complete Remission or become Primary resistant (target column: simp.response)
+
+### Challenge 2
+For patients who have complete remission, predict remission duration (length of remission in weeks for patients who achieve complete remission - remission ends if patient dies or relapses)
+
+### Challenge 3
+Predict survival time for all patients (life of length in weeks following diagnosis)
+
 ## Data
 
 ### Training
