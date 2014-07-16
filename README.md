@@ -16,6 +16,7 @@ Predict survival time for all patients (life of length in weeks following diagno
 
 ### Training
 - 192 patients
+- CR 136, RESISTANT 55
 
 ### Test
 - 101 patients
