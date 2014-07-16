@@ -4,7 +4,7 @@ import numpy as np
 
 def subsample_indices(n, k, bootstrap = True):
     if bootstrap:
-        return np.floor(np.random.rand(k) * n).astype(int)
+        return np.floor(np.random.rand(k) * n-1).astype(int)
     else:
         idx = np.arange(n)
         return np.random.shuffle(idx)[k]
