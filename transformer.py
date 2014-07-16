@@ -36,41 +36,41 @@ class Transformer(object):
                                     #'WBC',  # white blood cell count
                                     #'ABS.BLST', #  Total Myeloid blast cells
                                     #'BM.BLAST', #  Myeloid blast cells measured in bone marrow samples
-                                    'BM.MONOCYTES', # Monocyte cells in bone marrow
-                                    'BM.PROM', # Promegakarocytes measured in bone marrow
+                                    #'BM.MONOCYTES', # Monocyte cells in bone marrow
+                                    #'BM.PROM', # Promegakarocytes measured in bone marrow
                                     #'PB.BLAST', # Myeloid blast cells in blood
-                                    'PB.MONO', # Monocytes in blood
-                                    'PB.PROM',  # Promegakarocytes in blood
+                                    #'PB.MONO', # Monocytes in blood
+                                    #'PB.PROM',  # Promegakarocytes in blood
                                     #'HGB', # hemoglobin count in blood
                                     #'LDH',  # lactate dehydrogenase levels measured in blood
                                     #'ALBUMIN',  # albumin levels (protein made by the liver,  body is not absorbing enough protein)
                                     #'BILIRUBIN',  # bilirubin levels (found in bile,  fluid made by the liver, can lead to jaundice)
                                     #'CREATININE', # creatinine levels (measure of kidney function, waste of creatine, should be removed by kidneys)
                                     #'FIBRINOGEN', # fibrinongen levels (protein produced by the liver)
-                                    'CD34', 
+                                    #'CD34', 
                                     #'CD7',
                                     #'CD20',
                                     #'HLA.DR', 
                                     #'CD33', 
                                     #'CD10',
-                                    'CD13',
-                                    'CD19'
+                                    #'CD13',
+                                    #'CD19'
         ]
 
         self._proteomic = [l.strip() for l in open('proteomic_columns_used.txt')]
 
         self._untransformed_features = ['Age.at.Dx'] + self._proteomic
         self._binned_features = [   'Age.at.Dx',
-                                    'CD34', 
+                                    #'CD34', 
                                     #'CD7',
                                     #'CD20',
                                     #'HLA.DR', 
                                     #'CD33', 
                                     #'CD10',
-                                    'CD13',
-                                    'CD19',
-                                    'ALBUMIN',
-                                    'FIBRINOGEN',
+                                    #'CD13',
+                                    #'CD19',
+                                    #'ALBUMIN',
+                                    #'FIBRINOGEN',
                                     #'BM.PROM',
                                     #'PB.MONO',
                                     #'PB.PROM',

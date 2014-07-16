@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from transformer import Transformer
 
 import argparse
@@ -17,6 +18,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--eval', default=False, action='store_true', dest='eval')
     parser.add_argument('--linear', default=False, action='store_true', dest='linear')
+    parser.add_argument('--balance', default=False, action='store_true', dest='balance')
     parser.add_argument('--bin', default=False, action='store_true', dest='bin')
     parser.add_argument('--challenge', default="all", dest='challenge')
     
@@ -33,19 +35,19 @@ if __name__ == '__main__':
     data = pd.concat([train_data, submit_data], ignore_index = True)
     transformer = Transformer(include_binned = args.bin, scale = args.scale)
 
-
+    X_full = transformer.fit_transform(data)
+    X = X_full[:len(train_data)]
+    X_test = X_full[len(train_data):]
     if args.challenge == 'all' or args.challenge == '1':
         logging.info("Running challenge 1 - Predict remission vs resistance")
-        X_full = transformer.fit_transform(data)
-        X = X_full[:len(train_data)]
-        X_test = X_full[len(train_data):]
 
         # Challenge 1
-        c1_target = train_data['resp.simple'].map(lambda x: 1 if x == 'CR' else 0)
-        remission_model = predict_remission(X, c1_target, X_test, linear = args.linear)
+        c1_target = np.array(train_data['resp.simple'].map(lambda x: 1 if x == 'CR' else 0))
+        remission_model = predict_remission(X, c1_target, linear = args.linear, balance = args.balance)
         if args.print_coef:
             get_top_features(transformer.feature_names, remission_model)
         remission_prob = remission_model.predict_proba(X_test).T[-1]
+
         c1_df = pd.DataFrame({id_column: submit_data[id_column], 'CR_Confidence': remission_prob})
         create_submission(c1_df, "challenge1_submission.csv")
      

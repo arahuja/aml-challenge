@@ -2,13 +2,22 @@ from sklearn.metrics import make_scorer
 from scipy.stats.stats import pearsonr
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import roc_auc_score
+import math
 
 
-def get_top_features(feature_names, model):
+def get_top_features(feature_names, model, eps = 1e-2):
     if hasattr(model, 'coef_'):
-        features = sorted(zip(model.coef_[0, :], feature_names), reverse=True)
-        for x in set(features[:30] + features[-30:]):
+        features = zip(model.coef_[0, :], feature_names)
+        features_dict = {}
+        for coef, name in features:
+            name = name.split("-")[0]
+            features_dict[name] = features_dict.get(name, 0) + coef
+        features = sorted([(v, k) for (k, v) in features_dict.items()], reverse=True)
+        for x in features[:10] + features[-10:]:
             print x
+        for v, k in features:
+            if math.fabs(v) < eps:
+                print k,v
 
 
 def normalized_pcc_score(x, y):
@@ -16,17 +25,16 @@ def normalized_pcc_score(x, y):
     return (c + 1.0) / 2
 
 
-def specificity_score(y_true, y_pred, threshold = 0.5):
-    y_pred = y_pred > 0.5
+def specificity_score(y_true, y_pred):
     cm = confusion_matrix(y_true, y_pred)
     return float(cm[0][0]) / (cm[0][0] + cm[0][1])
 
 
 def balanced_accuracy_score(y_true, y_pred):
     cm = confusion_matrix(y_true, y_pred)
+    print cm
     specificity = float(cm[0][0]) / (cm[0][0] + cm[0][1])
-    recall = float(cm[1][0]) / (cm[1][0] + cm[1][1])
-
+    recall = float(cm[1][1]) / (cm[1][0] + cm[1][1])
     return .5 * (specificity + recall)
 
 

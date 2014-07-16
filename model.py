@@ -1,5 +1,6 @@
 import logging
-from sklearn.cross_validation import cross_val_score
+from sklearn.cross_validation import cross_val_score, train_test_split
+from sklearn.metrics import classification_report, make_scorer
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingClassifier
 
 from sklearn.linear_model import LogisticRegression, LinearRegression
@@ -7,19 +8,21 @@ import cPickle
 
 from scorers import normalized_pcc
 from scorers import balanced_accuracy
+from balancer import BalancedClassifier
 
+classification_report_scorer = make_scorer(classification_report)
 
-def build_model(model, X, y, X_test, output, scorer = 'roc_auc'):
+def build_model(model, X, y, output, scorer = 'roc_auc'):
     logging.info("Running cross-validation...")
     eval_model(model, X, y, scorer)
 
     logging.info("Fitting final model...")
     model.fit(X, y)
 
-    # save the classifier
-    if output:
-        with open(output, 'wb') as fid:
-            cPickle.dump(model, fid)
+    # # save the classifier
+    # if output:
+    #     with open(output, 'wb') as fid:
+    #         cPickle.dump(model, fid)
     return model
 
 
@@ -31,16 +34,21 @@ def eval_model(model, X, Y, scorer = 'roc_auc'):
         logging.info(scores)
         logging.info("Average cross validation score: {}".format(scores.mean()))
 
+    X_train, X_test, y_train, y_test = train_test_split(X, Y)
+    model.fit(X_train, y_train)
+    print classification_report(y_test, model.predict(X_test))
 
-def predict_remission(X, y, X_test,
+def predict_remission(X, y,
                       linear = False,
+                      balance = False,
                       output = None):
-
     rf_model = GradientBoostingClassifier(n_estimators = 2000)
-    lr_model = LogisticRegression(penalty='l1')
+    lr_model = LogisticRegression(penalty='l1', C = 0.5)
 
     model = lr_model if linear else rf_model
-    return build_model(model, X, y, X_test, output, scorer=['roc_auc', balanced_accuracy])
+    if balance:
+        model = BalancedClassifier(base_clf = model, n_estimators = 10)
+    return build_model(model, X, y, output, scorer=['roc_auc', balanced_accuracy])
 
 
 def predict_remission_length(remission_model, X, y, X_test,
