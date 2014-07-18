@@ -1,10 +1,13 @@
 from sklearn.base import ClassifierMixin
 from sklearn import clone
 import numpy as np
+from scipy.sparse import hstack
 
 def subsample_indices(n, k, bootstrap = True):
     if bootstrap:
-        return np.floor(np.random.rand(k) * n-1).astype(int)
+        n = (n-1)
+        i = np.floor(np.random.rand(k) * n).astype(int)
+        return i
     else:
         idx = np.arange(n)
         return np.random.shuffle(idx)[k]
@@ -85,7 +88,7 @@ class BalancedClassifier(ClassifierMixin):
             clf = clone(self._base_clf)
             clf.fit(balancedX, balancedY)
             self._fit_models.append(clf)
-        return self 
+        return self
 
     def predict_proba(self, X):
         init = True

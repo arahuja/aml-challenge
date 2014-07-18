@@ -3,7 +3,8 @@ from sklearn.cross_validation import cross_val_score, train_test_split
 from sklearn.metrics import classification_report, make_scorer
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingClassifier
 
-from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression, RidgeClassifierCV
+from sklearn.grid_search import GridSearchCV
 import cPickle
 
 from scorers import normalized_pcc
@@ -33,17 +34,20 @@ def eval_model(model, X, Y, scorer = 'roc_auc'):
         scores = cross_val_score(model, X, Y, scoring=s, cv=5)
         logging.info(scores)
         logging.info("Average cross validation score: {}".format(scores.mean()))
-
-    X_train, X_test, y_train, y_test = train_test_split(X, Y)
-    model.fit(X_train, y_train)
-    print classification_report(y_test, model.predict(X_test))
+        if s == 'roc_auc':
+            X_train, X_test, y_train, y_test = train_test_split(X, Y)
+            model.fit(X_train, y_train)
+            print classification_report(y_test, model.predict(X_test))
 
 def predict_remission(X, y,
                       linear = False,
                       balance = False,
                       output = None):
     rf_model = GradientBoostingClassifier(n_estimators = 2000)
-    lr_model = LogisticRegression(penalty='l1', C = 0.5)
+    lr_model = GridSearchCV(cv=None,
+       estimator=LogisticRegression(penalty='l2'), 
+       n_jobs=4, param_grid={'C': [0.001, 0.01, 0.05, 0.08, 0.1, 0.5, 1]})
+
 
     model = lr_model if linear else rf_model
     if balance:
@@ -58,7 +62,7 @@ def predict_remission_length(remission_model, X, y, X_test,
     lr_model = LinearRegression()
 
     model = lr_model if linear else rf_model
-    return build_model(model, X, y, X_test, output, scorer = normalized_pcc)
+    return build_model(model, X, y, output, scorer = normalized_pcc)
 
 
 def predict_survival_time(X, y, X_test, linear = False,
@@ -69,4 +73,4 @@ def predict_survival_time(X, y, X_test, linear = False,
 
     model = lr_model if linear else rf_model
 
-    return build_model(model, X, y, X_test, output, scorer = normalized_pcc)
+    return build_model(model, X, y, output, scorer = normalized_pcc)

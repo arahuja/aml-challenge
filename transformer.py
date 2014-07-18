@@ -1,4 +1,4 @@
-from scipy.sparse import hstack
+from numpy import hstack
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -113,19 +113,21 @@ class Transformer(object):
 
     def fit(self, data):
         self.feature_names = self._untransformed_features[:]
-        X = data[self._untransformed_features]
+        X = np.array(data[self._untransformed_features])
         if self._include_binned:
-            binnedX = self._bin_features(data, train = True)
+            binnedX = np.array(self._bin_features(data, train = True))
             self.feature_names += self._dv.get_feature_names()
-            X = hstack((X, binnedX)).todense()
+            print X.shape
+            print binnedX.shape
+            X = hstack((X, binnedX))
         if self._scale:
             self._scaler.fit(X)
 
     def transform(self, data):
-        X = data[self._untransformed_features]
+        X = np.array(data[self._untransformed_features])
         if self._include_binned:
             binnedX = self._bin_features(data, train = False)
-            X = hstack((X, binnedX)).todense()
+            X = hstack((X, binnedX))
         if self._scale:
             self._scaler.transform(X)
         return X
