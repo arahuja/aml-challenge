@@ -35,10 +35,18 @@ if __name__ == '__main__':
     parser.add_argument('--scale', default=False, action='store_true', dest='scale')
     parser.add_argument('--print-coef', default=False, action='store_true', dest='print_coef')
     parser.add_argument('--output', default='c1_model.pkl', dest='output')
+
+    parser.add_argument('--dryrun', default=False, action='store_true', dest='dryrun')
+
     args = parser.parse_args()
 
-    train_data = pd.read_csv('trainingData-release.csv')
-    submit_data = pd.read_csv('scoringData-release.csv')
+    if args.dryrun:
+        train_data = pd.read_csv('sampleSplitTrainingData.csv')
+        submit_data = pd.read_csv('sampleSplitTestData.csv')
+        args.output += 'dryrun'
+    else:
+        train_data = pd.read_csv('trainingData-release.csv')
+        submit_data = pd.read_csv('scoringData-release.csv')
     id_column = '#Patient_id'
 
     data = pd.concat([train_data, submit_data], ignore_index = True)
@@ -70,7 +78,10 @@ if __name__ == '__main__':
         remission_prob = remission_model.predict_proba(X_test).T[-1]
 
         c1_df = pd.DataFrame({id_column: submit_data[id_column], 'CR_Confidence': remission_prob})
-        create_submission(c1_df, "challenge1_submission.csv")
+        if args.dryrun:
+            create_submission(c1_df, "dryrun-challenge1_submission.csv")
+        else:
+            create_submission(c1_df, "challenge1_submission.csv")
      
     if args.challenge == 'all' or args.challenge == '3':    
         # Challenge 3
@@ -88,7 +99,7 @@ if __name__ == '__main__':
         transformer = Transformer(include_binned = args.bin, scale = args.scale)
 
         remission_length_model = predict_remission_length(remission_model, X, c2_target, X_test)
-        remission_length = remission_length_model.predict(c2X_test).T[-1]
+        remission_length = remission_length_model.predict(X_test).T[-1]
         c2_df = pd.DataFrame({id_column: submit_data[id_column], 
                             'Remission_Duration': remission_length, 
                             'Confidence' : remission_length})

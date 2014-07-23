@@ -43,14 +43,14 @@ def predict_remission(X, y,
                       linear = False,
                       balance = False,
                       output = None):
-    rf_model = GradientBoostingClassifier(n_estimators = 2000)
-    lr_model = GridSearchCV(cv=None,
-       estimator=LogisticRegression(penalty='l2'), 
-       n_jobs=4, param_grid={'C': [0.001, 0.01, 0.05, 0.08, 0.1, 0.5, 1]})
-
+    rf_model = GradientBoostingClassifier(n_estimators = 4000)
+    lr_model = LogisticRegression(penalty='l1')
 
     model = lr_model if linear else rf_model
     if balance:
+        model = GridSearchCV(cv=None,
+            estimator=LogisticRegression(penalty='l2'), 
+            n_jobs=4, param_grid={'C': [0.001, 0.01, 0.05, 0.08, 0.1, 0.5, 1]})
         model = BalancedClassifier(base_clf = model, n_estimators = 10)
     return build_model(model, X, y, output, scorer=['roc_auc', balanced_accuracy])
 

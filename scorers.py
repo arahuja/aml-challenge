@@ -6,14 +6,15 @@ import math
 
 
 def get_top_features(feature_names, model, eps = 1e-2):
+    print model
     if hasattr(model, 'coef_'):
         features = zip(model.coef_[0, :], feature_names)
         features_dict = {}
-        for coef, name in features:
-            name = name.split("-")[0]
-            features_dict[name] = features_dict.get(name, 0) + coef
-        features = sorted([(v, k) for (k, v) in features_dict.items()], reverse=True)
-        for x in features[:10] + features[-10:]:
+        # for coef, name in features:
+        #     name = name.split("-")[0]
+        #     features_dict[name] = features_dict.get(name, 0) + coef
+        # features = sorted([(v, k) for (k, v) in features_dict.items()], reverse=True)
+        for x in features[:15] + features[-15:]:
             print x
         for v, k in features:
             if math.fabs(v) < eps:
