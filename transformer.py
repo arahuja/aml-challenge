@@ -21,23 +21,68 @@ class Transformer(object):
     def __init__(self, include_binned = False, scale = False):
         self._categorical_features = [
                                       #'SEX',
+                                      #'PRIOR.MAL', # Whether the patient has previous cancer
+                                      #'PRIOR.CHEMO', # Whether the patient had prior chemo
+                                      #'PRIOR.XRT', # Prior radiation
+                                      #'Infection' # Has infection
+                                      #'cyto.cat', #  cytogenic category
                                       'ITD',  # Has the ITD FLT3 mutation
-                                      'D835', # Has the D835 FLT3 mutation
-                                      'Ras.Stat' # Has the Ras.Stat mutation
+                                      #'D835', # Has the D835 FLT3 mutation
+                                      #'Ras.Stat' # Has the Ras.Stat mutation
                                       ]
 
-        self._numerical_features = []
+        self._numerical_features = [
+                                    'Age.at.Dx', # Age at diagnosis
+                                    #'WBC',  # white blood cell count
+                                    #'ABS.BLST', #  Total Myeloid blast cells
+                                    #'BM.BLAST', #  Myeloid blast cells measured in bone marrow samples
+                                    #'BM.MONOCYTES', # Monocyte cells in bone marrow
+                                    #'BM.PROM', # Promegakarocytes measured in bone marrow
+                                    #'PB.BLAST', # Myeloid blast cells in blood
+                                    #'PB.MONO', # Monocytes in blood
+                                    #'PB.PROM',  # Promegakarocytes in blood
+                                    #'HGB', # hemoglobin count in blood
+                                    #'LDH',  # lactate dehydrogenase levels measured in blood
+                                    #'ALBUMIN',  # albumin levels (protein made by the liver,  body is not absorbing enough protein)
+                                    #'BILIRUBIN',  # bilirubin levels (found in bile,  fluid made by the liver, can lead to jaundice)
+                                    #'CREATININE', # creatinine levels (measure of kidney function, waste of creatine, should be removed by kidneys)
+                                    #'FIBRINOGEN', # fibrinongen levels (protein produced by the liver)
+                                    #'CD34', 
+                                    #'CD7',
+                                    #'CD20',
+                                    #'HLA.DR', 
+                                    #'CD33', 
+                                    #'CD10',
+                                    #'CD13',
+                                    #'CD19'
+        ]
 
-        self._proteomic = [l.strip() for l in open('proteomic_columns_min.txt')]
+        self._proteomic = [l.strip() for l in open('proteomic_columns_used.txt')]
 
-        self._binned_features = ['Age.at.Dx'] + self._proteomic
+        self._untransformed_features = ['Age.at.Dx'] + self._proteomic
+        self._binned_features = [   'Age.at.Dx',
+                                    #'CD34', 
+                                    #'CD7',
+                                    #'CD20',
+                                    #'HLA.DR', 
+                                    #'CD33', 
+                                    #'CD10',
+                                    #'CD13',
+                                    #'CD19',
+                                    #'ALBUMIN',
+                                    #'FIBRINOGEN',
+                                    #'BM.PROM',
+                                    #'PB.MONO',
+                                    #'PB.PROM',
+                                    #'BM.MONOCYTES'
+        ] + self._proteomic
     
-        self._cat_dv = DictVectorizer()
         self._dv = DictVectorizer()
         self._scaler = StandardScaler()
         self._bounding_bins = {}
 
         self._include_binned = include_binned
+        self._scale = scale
 
     def create_bounded_features(self, data, col, splits, percentiles = False, train = True):
         binned_feature_name = col+'-binned'
@@ -54,11 +99,10 @@ class Transformer(object):
         for feature in self._binned_features:
             self.create_bounded_features(data, 
                                          feature, 
-                                         splits = [0.0, 0.20, 0.8, 1.0], 
+                                         splits = [0.0, 0.2, 0.8, 1.0], 
                                          percentiles = True, 
                                          train = train)
         binned_vals = data[binned_feature_names].T.to_dict().values()
-        print data[binned_feature_names].head()
         if train:
             binnedX = self._dv.fit_transform(binned_vals).todense()
         else:
@@ -68,22 +112,24 @@ class Transformer(object):
         return binnedX
 
     def fit(self, data):
-        self.feature_names = self._categorical_features[:]
-        X = self._cat_dv.fit_transform(data[self._categorical_features].T.to_dict().values()).todense()
-
+        self.feature_names = self._untransformed_features[:]
+        X = np.array(data[self._untransformed_features])
         if self._include_binned:
             binnedX = np.array(self._bin_features(data, train = True))
-            print self._dv.get_feature_names()
             self.feature_names += self._dv.get_feature_names()
+            print X.shape
+            print binnedX.shape
             X = hstack((X, binnedX))
+        if self._scale:
+            self._scaler.fit(X)
 
     def transform(self, data):
-        X = self._cat_dv.transform(data[self._categorical_features].T.to_dict().values()).todense()
-        
+        X = np.array(data[self._untransformed_features])
         if self._include_binned:
             binnedX = self._bin_features(data, train = False)
             X = hstack((X, binnedX))
-        
+        if self._scale:
+            self._scaler.transform(X)
         return X
 
     def fit_transform(self, data):

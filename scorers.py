@@ -40,7 +40,6 @@ def balanced_accuracy_score(y_true, y_pred):
 
 
 def balanced_accuracy_auc_score(y_true, y_pred, threshold = 0.5):
-    print y_pred, y_true
     bac = balanced_accuracy_score(y_true, y_pred)
     auc_score = roc_auc_score(y_true, y_pred)
     return bac, auc_score
